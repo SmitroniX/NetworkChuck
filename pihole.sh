@@ -4,11 +4,11 @@
 
 docker run -d \
     --name pihole \
-    -p 53:53/tcp -p 53:53/udp \
-    -p 80:80 \
-    -p 443:443 \
-    -p 8080:8080 \
-    -e TZ="America/Chicago" \
+    -p 58:58/tcp -p 58:58/udp \
+    -p 86:86 \
+    -p 445:445 \
+    -p 8880:8880 \
+    -e TZ="America/kolkata" \
     -v "$(pwd)/etc-pihole/:/etc/pihole/" \
     -v "$(pwd)/etc-dnsmasq.d/:/etc/dnsmasq.d/" \
     --dns=127.0.0.1 --dns=1.1.1.1 \
