@@ -1,34 +1,39 @@
-#!/bin/bash
-
-# https://github.com/pi-hole/docker-pi-hole/blob/master/README.md
-
-docker run -d \
-    --name pihole \
-    -p 58:58/tcp -p 58:58/udp \
-    -p 86:86 \
-    -p 445:445 \
-    -p 8880:8880 \
-    -e TZ="America/kolkata" \
-    -v "$(pwd)/etc-pihole/:/etc/pihole/" \
-    -v "$(pwd)/etc-dnsmasq.d/:/etc/dnsmasq.d/" \
-    --dns=127.0.0.1 --dns=1.1.1.1 \
-    --restart=unless-stopped \
-    thenetworkchuck/networkchuck_pihole
-
-printf 'Starting up pihole container '
-for i in $(seq 1 20); do
-    if [ "$(docker inspect -f "{{.State.Health.Status}}" pihole)" == "healthy" ] ; then
-        printf ' OK'
-        echo -e "\n$(docker logs pihole 2> /dev/null | grep 'password:') for your pi-hole: https://${IP}/admin/"
-        exit 0
-    else
-        sleep 3
-        printf '.'
-    fi
-
-    if [ $i -eq 20 ] ; then
-        echo -e "\nTimed out waiting for Pi-hole start, consult check your container logs for more info (\`docker logs pihole\`)"
-        exit 1
-    fi
-done;
-© 2020 GitHub, Inc.
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      # DNS Ports
+      - "58:58/tcp"
+      - "58:58/udp"
+      # Default HTTP Port
+      - "85:85/tcp"
+      # Default HTTPs Port. FTL will generate a self-signed certificate
+      - "448:448/tcp"
+      # Uncomment the below if using Pi-hole as your DHCP Server
+      #- "67:67/udp"
+      # Uncomment the line below if you are using Pi-hole as your NTP server
+      #- "123:123/udp"
+    environment:
+      # Set the appropriate timezone for your location from
+      # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones, e.g:
+      TZ: 'Asia/kolkata'
+      # Set a password to access the web interface. Not setting one will result in a random password being assigned
+      FTLCONF_webserver_api_password: 'correct horse battery staple'
+      # If using Docker's default `bridge` network setting the dns listening mode should be set to 'all'
+      FTLCONF_dns_listeningMode: 'all'
+    # Volumes store your data between container upgrades
+    volumes:
+      # For persisting Pi-hole's databases and common configuration file
+      - './etc-pihole:/etc/pihole'
+      # Uncomment the below if you have custom dnsmasq config files that you want to persist. Not needed for most starting fresh with Pi-hole v6. If you're upgrading from v5 you and have used this directory before, you should keep it enabled for the first v6 container start to allow for a complete migration. It can be removed afterwards. Needs environment variable FTLCONF_misc_etc_dnsmasq_d: 'true'
+      #- './etc-dnsmasq.d:/etc/dnsmasq.d'
+    cap_add:
+      # See https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+      # Required if you are using Pi-hole as your DHCP server, else not needed
+      - NET_ADMIN
+      # Required if you are using Pi-hole as your NTP client to be able to set the host's system time
+      - SYS_TIME
+      # Optional, if Pi-hole should get some more processing time
+      - SYS_NICE
+    restart: unless-stopped
